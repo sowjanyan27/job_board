@@ -1,7 +1,7 @@
 """
 created_by: sowjanya
 created_date:07-05-2025
-modified_date:
+modified_date:08-05-2025
 Description:Getting the jobs
 """
 from aiocache import Cache
@@ -12,26 +12,19 @@ import io
 from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-import time,asyncio
-from app.core.config import settings
+import time
 from app.db.models.job import Job
 from app.schemas.job import JobsData
 from app.db.session import get_db
-from app.crud.job import get_jobs,get_job_by_id
-from fastapi.responses import StreamingResponse
-import json
-from cachetools import TTLCache
 from app.core.logger import get_logger
 
-
-user_cache: Dict[int, List[dict]] = {}
-user_stream_cache = {}
 router = APIRouter()
-user_cache1 = TTLCache(maxsize=10, ttl=300)
 cache = Cache.from_url("memory://")  # In-memory cache
 
 
 logger = get_logger("jobs")
+logger.info("Logger test message")
+
 @router.get("/",response_model=List[JobsData],summary="Get all Jobs")
 async def get_all_jobs(skip: int = Query(0),limit: int = Query(10000),db: Session = Depends(get_db),):
     start_time = time.time()
@@ -55,7 +48,7 @@ async def get_all_jobs(skip: int = Query(0),limit: int = Query(10000),db: Sessio
 
 
 @router.get("/filter", response_model=list[JobsData], summary="Get Jobs with filters")
-async def fetch_users_with_filters(
+async def fetch_jobs_with_filters(
         tittle: Optional[str] = Query(None),  # Optional filter for name
         company: Optional[str] = Query(None),  # Optional filter for email
         location: Optional[str] = Query(None),  # Optional filter for role
