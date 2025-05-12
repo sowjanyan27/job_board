@@ -14,17 +14,11 @@ from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 import time,asyncio
-from app.core.config import settings
 from app.db.models.user import User
 from app.schemas.user import UserOut
 from app.db.session import get_db
-from app.crud.user import get_users, get_user_by_id
-# from app.core.logger import logger
-from fastapi.responses import StreamingResponse
 import json
-from cachetools import TTLCache
 from aiocache import Cache
-from aiocache.serializers import JsonSerializer
 from app.core.logger import get_logger
 
 
@@ -68,7 +62,8 @@ async def fetch_all_users(
         # Log the number of users retrieved
         logger.info(f"[GET /users] Retrieved {len(users)} users from DB")
 
-        users_data = [UserOut.from_orm(user).dict() for user in users]
+        # users_data = [UserOut.from_orm(user).dict() for user in users]
+        users_data = [UserOut.model_validate(user).model_dump() for user in users]  # ✅ Correct for v2
 
         # Serialize to JSON
         json_data = json.dumps(users_data, indent=2)
@@ -101,6 +96,9 @@ async def fetch_users_with_filters(
         limit: int = Query(...),  # Pagination is mandatory, no default value
         db: Session = Depends(get_db),  # Dependency for DB session
 ):
+    """
+        Fetches a Users with filter and pagination  from the database or cache.
+        """
     try:
         start_time = time.time()
         logger.info(f"[GET /users/filter] Filters: name={name}, email={email}, role={role}, skip={skip}, limit={limit}")

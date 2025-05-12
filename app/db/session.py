@@ -2,7 +2,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import logging
 
-SQLALCHEMY_DATABASE_URL = "postgresql://newmek_job:w7z2DXWhK$hlTKg@192.168.2.75/job_board"
+# SQLALCHEMY_DATABASE_URL = "postgresql://newmek_job:w7z2DXWhK$hlTKg@192.168.2.75/job_board"
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:sowji27%40@localhost/postgres"
 try:
     engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

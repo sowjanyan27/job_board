@@ -1,5 +1,15 @@
+"""
+models/job.py
+
+This module defines the SQLAlchemy ORM model for storing job listings in the database.
+It maps the 'jobs' table schema, ensuring structure and integrity of job data
+when performing database operations.
+
+SQLAlchemy's ORM allows easy interaction with relational databases using Python classes.
+"""
+
 from sqlalchemy import Column, Integer, String, JSON
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 

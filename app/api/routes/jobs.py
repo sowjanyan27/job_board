@@ -20,24 +20,41 @@ from app.core.logger import get_logger
 
 router = APIRouter()
 cache = Cache.from_url("memory://")  # In-memory cache
-
-
 logger = get_logger("jobs")
-logger.info("Logger test message")
 
-@router.get("/",response_model=List[JobsData],summary="Get all Jobs")
+################### 1--------------- get data by  pagination with get users -------------------
+"""
+  Fetches a all  jobs  from the database.
+
+  Args:
+      db: The database session dependency.
+
+  Returns:
+      A Jobs data model representing the fetched job.
+
+  Raises:
+      HTTPException: If the jobs are not find then exception will be  is not found.
+  """
+
+@router.get("/",response_model=List[JobsData],summary="Get all Jobs (paginated)")
 async def get_all_jobs(skip: int = Query(0),limit: int = Query(10000),db: Session = Depends(get_db),):
+    """
+        Fetches a all  jobs by  pagination  from the database or cache.
+        """
+
     start_time = time.time()
+
     try:
-        logger.info(f"[GET /users] skip={skip}, limit={limit}")
+
+        logger.info(f"[GET /jobs] skip={skip}, limit={limit}")
 
         # Fetch jobs from DB
         jobs = db.query(Job).order_by(Job.id).offset(skip).limit(limit).all()
 
-        # Log the number of users retrieved
-        logger.info(f"[GET /Jobs] Retrieved {len(jobs)} users from DB")
+        # Log the number of jobs retrieved
+        logger.info(f"[GET /Jobs] Retrieved {len(jobs)} jobs from DB")
         duration = time.time() - start_time  # End timing the request
-        logger.info(f"[GET /Jobs] Retrieved {len(jobs)} users in {duration:.3f} seconds")
+        logger.info(f"[GET /Jobs] Retrieved {len(jobs)} jobs in {duration:.3f} seconds")
 
         # Return the jobs (You may choose to stream compressed data if needed)
         return jobs
@@ -46,30 +63,44 @@ async def get_all_jobs(skip: int = Query(0),limit: int = Query(10000),db: Sessio
         logger.exception(f"Failed to fetch jobs. Error: {str(e)}")
         raise HTTPException(status_code=500, detail="Could not fetch jobs")
 
+################## 2. get all users with pagination and filtering data ######################
+"""
+  Fetches a all  jobs  with filter  from the database.
 
+  Args:
+      db: The database session dependency.
+  Returns:
+      A Jobs data model with filtering  representing the fetched job.
+
+  Raises:
+      HTTPException: If the jobs are not find then exception will be  is not found.
+  """
 @router.get("/filter", response_model=list[JobsData], summary="Get Jobs with filters")
 async def fetch_jobs_with_filters(
-        tittle: Optional[str] = Query(None),  # Optional filter for name
-        company: Optional[str] = Query(None),  # Optional filter for email
-        location: Optional[str] = Query(None),  # Optional filter for role
+        tittle: Optional[str] = Query(None),  # Optional filter for tittle
+        company: Optional[str] = Query(None),  # Optional filter for company
+        location: Optional[str] = Query(None),  # Optional filter for location
         skip: int = Query(...),  # Pagination is mandatory, no default value
         limit: int = Query(...),  # Pagination is mandatory, no default value
         db: Session = Depends(get_db),  # Dependency for DB session
 ):
+    """
+        Fetches All   jobs  with pagination and filter  from the database or cache.
+        """
     try:
         start_time = time.time()
         logger.info(f"[GET /jobs/filter] Filters: tittle={tittle}, company={company}, location={location}, skip={skip}, limit={limit}")
 
         # Create a cache key based on the filters and pagination
-        cache_key = f"users_{tittle}_{company}_{location}_{skip}_{limit}"
+        cache_key = f"jobs_{tittle}_{company}_{location}_{skip}_{limit}"
 
         # Check if the result is already cached
         cached_result = await cache.get(cache_key)
         if cached_result:
-            logger.info(f"[GET /users/filter] Cache hit for filters: {cache_key}")
+            logger.info(f"[GET /jobs/filter] Cache hit for filters: {cache_key}")
             return cached_result
         else:
-            logger.info(f"[GET /users/filter] Cache miss for filters: {cache_key}")
+            logger.info(f"[GET /jobs/filter] Cache miss for filters: {cache_key}")
 
             # Start the base query
             query = db.query(Job).order_by(Job.id)
@@ -86,56 +117,41 @@ async def fetch_jobs_with_filters(
             total = query.count()
 
             # Apply pagination (mandatory)
-            users = query.offset(skip).limit(limit).all()
+            jobs = query.offset(skip).limit(limit).all()
 
-            logger.info(f"[GET /jobs/filter] Retrieved {len(users)} filtered jobs, total matching: {total}")
+            logger.info(f"[GET /jobs/filter] Retrieved {len(jobs)} filtered jobs, total matching: {total}")
 
             # Log the query duration
             duration = time.time() - start_time
             logger.info(f"[GET /jobs/filter] Query executed in {duration:.3f} seconds")
 
             # Optionally cache the result
-            await cache.set(cache_key, users)
+            await cache.set(cache_key, jobs)
 
-            return users
+            return jobs
 
     except Exception as e:
-        logger.exception(f"Failed to fetch filtered users. Error: {str(e)}")
+        logger.exception(f"Failed to fetch filtered jobs. Error: {str(e)}")
         raise HTTPException(status_code=500, detail="Could not fetch filtered Jobs")
 
+##################   3. fetch  job by id            ###########################
 
+"""
+  Fetches a   job details   by the id   from the database.
+  
+  Args:
+      job_id: The ID of the job to retrieve.
+      db: The database session dependency.
+  Returns:
+      A Jobs data model with filtering  representing the fetched job.
 
-# @router.get("/jobs/{job_id}", response_model=JobsData)
-# def read_user(job_id: int, db: Session = Depends(get_db)) -> JobsData:
-#     """
-#     Fetches a single job by their ID from the database.
-#
-#     Args:
-#         job_id: The ID of the job to retrieve.
-#         db: The database session dependency.
-#
-#     Returns:
-#         A Jobsdata model representing the fetched user.
-#
-#     Raises:
-#         HTTPException: If the job with the specified ID is not found.
-#     """
-#     start_time = time.time()
-#     job = get_job_by_id(db, job_id)
-#
-#     if not job:
-#         logger.warning(f"Job with ID {job_id} not found.")
-#         raise HTTPException(status_code=404, detail="Job not found")
-#
-#     duration = time.time() - start_time
-#     logger.info(f"[GET /jobs/{job_id}] job fetched in {duration:.3f} seconds")
-#     return job
-#
-
+  Raises:
+      HTTPException: If the jobs are not find then exception will be  is not found.
+  """
 @router.get("/jobs/{job_id}", response_model=JobsData)
-async def read_user(job_id: int, db: Session = Depends(get_db)) -> JobsData:
+async def read_job(job_id: int, db: Session = Depends(get_db)) -> JobsData:
     """
-    Fetches a single user by their ID from the database or cache.
+    Fetches a single job by their ID from the database or cache.
     """
     start_time = time.time()
 
@@ -150,10 +166,10 @@ async def read_user(job_id: int, db: Session = Depends(get_db)) -> JobsData:
 
     # If data is not found in cache, query the database
     try:
-        user = db.query(Job).filter(Job.id == job_id).first()
+        job = db.query(Job).filter(Job.id == job_id).first()
 
-        if not user:
-            # If user not found in the database
+        if not job:
+            # If job not found in the database
             logger.warning(f"[GET /jobs/{job_id}] job not found in database.")
             raise HTTPException(status_code=404, detail="job not found")
 
@@ -161,13 +177,13 @@ async def read_user(job_id: int, db: Session = Depends(get_db)) -> JobsData:
         logger.info(f"[GET /job/{job_id}] job fetched from database. Caching result for future requests.")
 
         # Cache the result for future requests
-        await cache.set(cache_key, user, ttl=300)  # Cache the user for 5 minutes
+        await cache.set(cache_key, job, ttl=300)  # Cache the job for 5 minutes
 
         # Log the query execution time
         duration = time.time() - start_time
-        logger.info(f"[GET /job/{job_id}] Query executed in {duration:.3f} seconds. User returned from database.")
+        logger.info(f"[GET /job/{job_id}] Query executed in {duration:.3f} seconds. job returned from database.")
 
-        return user
+        return job
 
     except Exception as e:
         # Log the error and raise an HTTPException with a status code of 500 (Internal Server Error)

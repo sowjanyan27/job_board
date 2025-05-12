@@ -8,7 +8,6 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 import time
-from app.core.config import settings
 from app.db.models.user import User
 from app.schemas.user import UserOut
 from app.db.session import get_db
